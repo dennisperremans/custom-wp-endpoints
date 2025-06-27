@@ -137,4 +137,3 @@ Hook into actions like `cwe_add_endpoint`, `cwe_save_query`, etc.
 ---
 
 **Author:** Dennis Perremans  
-**License:** GPL-2.0-or-later
