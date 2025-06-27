@@ -1,0 +1,37 @@
+.cwe-wrap {
+    padding: 1em;
+    max-width: 800px;
+}
+
+.cwe-section-title {
+    margin-top: 2em;
+    font-size: 1.4em;
+    font-weight: 600;
+}
+
+.cwe-form {
+    margin-bottom: 1em;
+}
+
+.cwe-select {
+    min-width: 200px;
+    margin-right: 10px;
+}
+
+.cwe-endpoint-list {
+    list-style: disc;
+    margin-left: 20px;
+    padding-left: 0;
+}
+
+.cwe-endpoint-item {
+    cursor: pointer;
+    margin: 6px 0;
+    padding: 6px;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s;
+}
+
+.cwe-endpoint-item:hover {
+    background-color: #f9f9f9;
+}
