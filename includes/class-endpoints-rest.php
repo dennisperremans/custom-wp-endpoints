@@ -8,6 +8,8 @@ class CWE_Endpoints_REST {
         $this->rest_namespace = !empty($settings['rest_namespace']) ? $settings['rest_namespace'] : 'custom/v1';
 
         add_action('rest_api_init', [$this, 'register_dynamic_routes']);
+
+        //echo esc_html('CWE REST namespace: ' . $this->rest_namespace);
     }
 
     public function register_dynamic_routes() {
@@ -16,8 +18,15 @@ class CWE_Endpoints_REST {
             'callback'            => [$this, 'handle_dynamic_endpoint'],
             'permission_callback' => '__return_true',
         ]);
+
+        register_rest_route($this->rest_namespace, '/delete-all', [
+            'methods'             => 'DELETE',
+            'callback'            => [$this, 'delete_all_endpoints'],
+            'permission_callback' => '__return_true',
+        ]);
     }
 
+    
     public function handle_dynamic_endpoint(WP_REST_Request $request) {
         $slug = $request->get_param('slug');
 
@@ -101,5 +110,17 @@ class CWE_Endpoints_REST {
         wp_reset_postdata();
 
         return rest_ensure_response($posts);
+    }
+
+    public function delete_all_endpoints( WP_REST_Request $request ) {
+        global $wpdb;
+        $table = $wpdb->prefix . CWE_Endpoints_DB::TABLE_NAME;
+        $deleted = $wpdb->query( "DELETE FROM $table" );
+
+        if ( $deleted === false ) {
+            return new WP_Error( 'delete_failed', 'Failed to delete endpoints.', [ 'status' => 500 ] );
+        }
+
+        return rest_ensure_response([ 'deleted' => $deleted ]);
     }
 }
