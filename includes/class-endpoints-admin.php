@@ -31,9 +31,8 @@ class CWE_Endpoints_Admin {
 		add_action( 'wp_ajax_cwe_delete_endpoint',       [ $this, 'ajax_delete_endpoint'       ] );
 		add_action( 'wp_ajax_cwe_edit_endpoint',         [ $this, 'ajax_edit_endpoint'         ] );
 		add_action( 'wp_ajax_cwe_save_query',            [ $this, 'ajax_save_query'            ] );
-
-		// 🔴  new – Danger‑zone bulk delete
 		add_action( 'wp_ajax_cwe_delete_all_endpoints',  [ $this, 'ajax_delete_all_endpoints'  ] );
+        add_action( 'wp_ajax_cwe_update_ppp', [ $this, 'ajax_update_ppp' ] );
 	}
 
 	/* ──────────────────────────────────────────────────────────────────────── */
@@ -51,6 +50,7 @@ class CWE_Endpoints_Admin {
 
 		/* –– CSS & JS ––––––––––––––––––––––––––––––––––––––––––––––––––––––– */
 
+        wp_enqueue_style( 'cwe-custom', CWE_URL . 'assets/css/custom.css', [], CWE_VERSION );
 		wp_enqueue_style( 'cwe-admin', CWE_URL . 'assets/css/admin.css', [], CWE_VERSION );
 
 		wp_enqueue_style( 'wp-jquery-ui-dialog' );
@@ -324,7 +324,7 @@ class CWE_Endpoints_Admin {
 	}
 
 	/* ──────────────────────────────────────────────────────────────────────── */
-	/*  NEW  –  Delete ALL endpoints (danger zone)                              */
+	/*   Delete ALL endpoints (danger zone)                              */
 	/* ──────────────────────────────────────────────────────────────────────── */
 
 	public function ajax_delete_all_endpoints() {
@@ -342,4 +342,34 @@ class CWE_Endpoints_Admin {
 
 		wp_send_json_success( [ 'deleted' => (int) $deleted ] );
 	}
+
+
+    public function ajax_update_ppp() {
+        check_ajax_referer( 'cwe-nonce', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( [ 'message' => 'No permission' ], 403 );
+        }
+
+        $id  = absint( $_POST['id'] ?? 0 );
+        $ppp = isset( $_POST['ppp'] ) ? (int) $_POST['ppp'] : null;
+
+        if ( ! $id || ! is_int( $ppp ) ) {
+            wp_send_json_error( [ 'message' => 'Invalid data' ], 400 );
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . CWE_Endpoints_DB::TABLE_NAME;
+
+        $wpdb->update(
+            $table,
+            [ 'posts_per_page' => $ppp ],
+            [ 'id' => $id ],
+            [ '%d' ],
+            [ '%d' ]
+        );
+
+        wp_send_json_success( [ 'id' => $id, 'posts_per_page' => $ppp ] );
+    }
+
 }

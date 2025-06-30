@@ -167,55 +167,88 @@
 		/* open modal, save etc. (same code as before) …  */
 
 		$('#cwe-endpoint-table').on('click', '.query-endpoint', function () {
-			const $row = $(this).closest('tr');
-			const id   = $row.data('id');
+            const $row = $(this).closest('tr');
+            const id   = $row.data('id');
 
-			$.post(CWE.ajaxUrl, { action:'cwe_get_endpoint', nonce:CWE.nonce, id })
-			.done(res => {
-				if (!res.success) return alert(res.data.message || 'Error');
+            $.post(CWE.ajaxUrl, { action:'cwe_get_endpoint', nonce:CWE.nonce, id })
+            .done(res => {
+                if (!res.success) return alert(res.data.message || 'Error');
 
-				const args = res.data.query_args || {};
-				const $tb  = $('#cwe-query-table tbody').empty();
-				if (Object.keys(args).length) {
-					Object.entries(args).forEach(([k,v])=>{
-						if (typeof v==='object' && v!==null) {
-							const [op,val] = Object.entries(v)[0];
-							$tb.append(rowTpl(k,op,val));
-						} else {
-							$tb.append(rowTpl(k,'=',v));
-						}
-					});
-				} else {
-					$tb.append(rowTpl());
-				}
+                const args = res.data.query_args || {};
+                const $tb  = $('#cwe-query-table tbody').empty();
 
-				$('#cwe-query-dialog').dialog({
-					title : `Query args for “${res.data.endpoint_slug}”`,
-					modal : true,
-					width : 600,
-					buttons:{
-						Save(){
-							const obj={};
-							$('#cwe-query-table tbody tr').each(function(){
-								const k=$(this).find('.qkey').val().trim();
-								const op=$(this).find('.qop').val();
-								const v=$(this).find('.qval').val().trim();
-								if(!k) return;
-								obj[k]= op==='=' ? v : { [op]:v };
-							});
-							$.post(CWE.ajaxUrl,{
-								action:'cwe_save_query',nonce:CWE.nonce,id,
-								query_args:JSON.stringify(obj)
-							}).done(r=>{
-								if(r.success) $('#cwe-query-dialog').dialog('close');
-								else alert(r.data.message||'Save error');
-							});
-						},
-						Cancel(){ $(this).dialog('close'); }
-					}
-				});
-			});
-		});
+                const currentPP = args.posts_per_page ?? '';
+                delete args.posts_per_page;
+
+                // Add posts_per_page field dynamically above the table if not present
+                if (!$('#cwe-ppp-wrapper').length) {
+                    $('#cwe-query-dialog').prepend(`
+                        <div id="cwe-ppp-wrapper" style="margin-bottom:1em">
+                            <label for="cwe-ppp"><strong>Posts per page:</strong></label><br>
+                            <input type="number" id="cwe-ppp" min="1" step="1" style="width: 80px;">
+                        </div>
+                    `);
+                }
+                $('#cwe-ppp').val(currentPP);
+
+                if (Object.keys(args).length) {
+                    Object.entries(args).forEach(([k,v])=>{
+                        if (typeof v==='object' && v!==null) {
+                            const [op,val] = Object.entries(v)[0];
+                            $tb.append(rowTpl(k,op,val));
+                        } else {
+                            $tb.append(rowTpl(k,'=',v));
+                        }
+                    });
+                } else {
+                    $tb.append(rowTpl());
+                }
+
+                $('#cwe-query-dialog').dialog({
+                    title : `Query args for “${res.data.endpoint_slug}”`,
+                    modal : true,
+                    width : 600,
+                    buttons:{
+                        Save(){
+                            const obj={};
+                            const pppVal = $('#cwe-ppp').val();
+                            if(pppVal !== '') {
+                                const parsed = parseInt(pppVal, 10);
+                                if (!isNaN(parsed) && parsed > 0) {
+                                    obj.posts_per_page = parsed;
+
+                                    // Save posts_per_page separately
+                                    $.post(CWE.ajaxUrl, {
+                                        action: 'cwe_update_ppp',
+                                        nonce : CWE.nonce,
+                                        id,
+                                        ppp   : parsed
+                                    });
+                                }
+                            }
+
+                            $('#cwe-query-table tbody tr').each(function(){
+                                const k=$(this).find('.qkey').val().trim();
+                                const op=$(this).find('.qop').val();
+                                const v=$(this).find('.qval').val().trim();
+                                if(!k) return;
+                                obj[k]= op==='=' ? v : { [op]:v };
+                            });
+
+                            $.post(CWE.ajaxUrl,{
+                                action:'cwe_save_query',nonce:CWE.nonce,id,
+                                query_args:JSON.stringify(obj)
+                            }).done(r=>{
+                                if(r.success) $('#cwe-query-dialog').dialog('close');
+                                else alert(r.data.message||'Save error');
+                            });
+                        },
+                        Cancel(){ $(this).dialog('close'); }
+                    }
+                });
+            });
+        });
+
 
 		$('#cwe-add-qrow').on('click',()=>$('#cwe-query-table tbody').append(rowTpl()));
 		$('#cwe-query-dialog').on('click','.remove-qrow',function(){ $(this).closest('tr').remove(); });
